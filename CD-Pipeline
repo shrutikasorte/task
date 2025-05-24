@@ -1,0 +1,35 @@
+pipeline {
+    agent any
+
+    environment {
+        image_name = 'my_container'
+        tag = 'latest'
+        passwd = 'account_id.dkr.ecr.ap-south-1.amazonaws.com'
+        region = 'ap-south-1'
+        ec2_user = 'ec2-user'
+        ec2_host = 'public_ip_of_ec2 for ssh'
+        deployment_name = 'my-deploy'
+        container_name = 'my-container'
+    }
+
+    stages {
+        stage('SSH into EC2 and pull docker image') {
+            steps {
+                withCredentials([sshUserPrivateKey(credentialsId: 'ec2-ssh-key', keyFileVariable: 'KEYFILE')]) {
+                    sh """
+                        chmod 600 \$KEYFILE
+                        ssh -i \$KEYFILE -o StrictHostKeyChecking=no ${ec2_user}@${ec2_host} '
+                            sudo aws ecr get-login-password --region ${region} | sudo docker login --username AWS --password-stdin ${passwd} &&
+                            sudo docker pull ${passwd}/${image_name}:${tag} &&
+                            sudo docker images | grep ${image_name}
+                         kubectl set image deployment/${deployment_name} my-container=${passwd}/${image_name}:${tag}
+                         kubectl expose deployment my-deploy --type=LoadBalancer --name=my-service --port=80 --target-port=5000
+
+                            
+                        '
+                    """
+                }
+            }
+        }
+    }
+}
