@@ -1,0 +1,37 @@
+piVersion : apps/v1
+kind : Deployment
+metadata:
+  name : my-deploy
+  
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: my-app
+  template:
+    metadata:
+      labels:
+        app: my-app
+  spec:
+    containers:
+    - name : my-container
+      image : nginx
+      ports :
+      - containerPort : 5000
+
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-service
+spec:
+  selector:
+    app: my-app
+  ports:
+    - protocol : TCP
+      port: 8080
+      targetPort: 5000
+  type: LoadBalancer
+
+
