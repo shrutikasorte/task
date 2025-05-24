@@ -1,0 +1,53 @@
+pipeline {
+    agent any
+    
+    environment {
+        image_name = 'add your image name'
+        tag = 'add tag'
+        ECR = 'aws_account_id.dkr.ecr.region.amazonaws.com'
+        region = 'add region'
+    }
+
+    stages {
+        stage('checkout') {
+            steps {
+               git branch: 'main', credentialsId: 'id', url: 'https://github.com/shrutikasorte/task.git'
+            }
+        }
+        stage('build') {
+            steps {
+               script{
+               sh  "sudo docker build -t ${image_name}:${tag} ."
+               }
+            }
+        }
+          stage('image scan') {
+            steps {
+               script{
+               sh  "sudo trivy image ${image_name}:${tag}"
+               }
+            }
+        }
+        stage('docker login') {
+            steps {
+               script{
+               sh " sudo aws ecr get-login-password --region ${region} | sudo docker login --username AWS --password-stdin ${ECR}"
+               }
+            }
+        }
+        stage('image_tag') {
+            steps {
+               script{
+               sh  "docker tag ${image_name}:${tag} account_id.dkr.ecr.ap-south-1.amazonaws.com/my_container:${tag}"
+               }
+            }
+        }
+        stage('image_push') {
+            steps {
+               script{
+               sh  "sudo  docker push account_id.dkr.ecr.ap-south-1.amazonaws.com/my_container:${tag}"
+               }
+            }
+        }
+    }
+ }
